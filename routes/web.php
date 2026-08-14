@@ -2,23 +2,46 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use App\Http\Controllers\Admin\ProjetController;
 use App\Http\Controllers\Admin\CompetenceController;
 use App\Http\Controllers\AvisController;
 
 // --- PAGES PUBLIQUES ---
 Route::get('/', function () {
-    return view('welcome');
+    return view('index');
 });
 
 // Route pour le formulaire de contact
 Route::post('/contact', function (Request $request) {
-    $request->validate([
+    $data = $request->validate([
         'nom' => 'required|string|max:255',
         'email' => 'required|email',
         'message' => 'required|min:10',
     ]);
-    return back()->with('success', 'Merci ! Votre message a bien été envoyé.');
+
+    // Envoi de l'email à ton adresse personnelle (sauvegarde)
+    try {
+        Mail::raw("Nouveau message reçu depuis le Portfolio :\n\n" .
+                  "Nom : " . $data['nom'] . "\n" .
+                  "Email : " . $data['email'] . "\n\n" .
+                  "Message :\n" . $data['message'], function ($message) use ($data) {
+            $message->to('koffimokpokposodehoundji@gmail.com')
+                    ->subject('Contact Portfolio : ' . $data['nom']);
+        });
+    } catch (\Exception $e) {
+        // On ignore si le mailer n'est pas encore configuré en local
+    }
+
+    // Construction du texte pré-rempli pour WhatsApp
+    $texte = "Bonjour Koffi, je m'appelle *{$data['nom']}* ({$data['email']}).\n\n" .
+             "Voici mon message :\n" .
+             "_{$data['message']}_";
+
+    $whatsappUrl = "https://wa.me/22870782133?text=" . urlencode($texte);
+
+    // Redirection automatique de l'utilisateur vers WhatsApp
+    return redirect()->away($whatsappUrl);
 })->name('contact.send');
 
 // Route pour les avis
@@ -41,7 +64,7 @@ Route::get('/', function () {
     // On récupère toutes les compétences enregistrées
     $competences = \App\Models\Competence::all();
     $projets =\App\Models\Projet::all();
-    return view('welcome', compact('competences', 'projets'));
+    return view('index', compact('competences', 'projets'));
 });
 
 ?>
